@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Valentine 💖</title>
+
+  <style>
+    :root {
+      --yes: #4CAF50;
+      --no: #f44336;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .wrap {
+      width: min(760px, 92vw);
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 22px 0;
+      font-size: clamp(22px, 3.5vw, 44px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    #cat {
+      width: 240px;
+      height: auto;
+      margin: 10px auto 10px auto;
+      display: block;
+      transition: transform 0.25s ease, filter 0.25s ease;
+    }
+
+    /* Sentence under the cat */
+    #status {
+      margin-top: 2px;
+      margin-bottom: 10px;
+      min-height: 34px;
+      font-size: clamp(18px, 2.5vw, 22px);
+      font-weight: 700;
+      color: #444;
+    }
+
+    /* happy idle bounce */
+    .idle {
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    #buttons {
+      display: flex;
+      gap: 44px; /* more distance between Yes and No */
+      justify-content: center;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 18px 42px;
+      transition: transform 0.2s ease, opacity 0.2s ease, font-size 0.2s ease, padding 0.2s ease;
+      font-weight: 800;
+    }
+
+    #yes {
+      background: var(--yes);
+      color: white;
+      font-size: 22px;
+    }
+
+    /* No stays red, but will move later via class */
+    #no {
+      background: var(--no);
+      color: white;
+      font-size: 18px;
+      opacity: 0.96;
+    }
+
+    /* When No becomes sneaky (moves to corners) */
+    .no-float {
+      position: fixed;
+      z-index: 1000;
+    }
+
+    /* Full-screen overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 9999;
+    }
+    .overlay.show { display: flex; }
+
+    .overlay-inner {
+      width: min(760px, 94vw);
+      background: #fff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    }
+
+    .overlay video {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+
+    .overlay-bottom {
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: #111;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>Will you be my Valentine? 🫣💖</h1>
+
+    <img id="cat" class="idle" src="cat_happy.png" alt="cute cat">
+    <div id="status"></div>
+
+    <div id="buttons">
+      <button id="yes">Yes</button>
+      <button id="no">No</button>
+    </div>
+  </div>
+
+  <!-- YES overlay video -->
+  <div id="overlay" class="overlay">
+    <div class="overlay-inner">
+      <video id="yesVideo" autoplay muted playsinline></video>
+
+      <div class="overlay-bottom">
+        <div id="overlayText">I knew you’d say yes 💖</div>
+        <button id="closeOverlay" class="close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== NO stages (7 clicks) ======
+    const sadStages = [
+      { img: "cat_sad1.png", text: "No ကို မရွေးပါနဲ့နော် နှလုံးသားလေးမခံစားနိုင်လို့ပါ 🥺👉👈" },
+      { img: "cat_sad2.png", text: "မမ ကလည်းကွာ...ဘာလို့လဲ ဘာလို့လဲ ဘာလို့လဲလို့🥺🥺 " },
+      { img: "cat_sad3.png", text: "ငိုချင်လာပြီလို့...Yesကို မရွေးရင် မေမေနဲ့ သွားတိုင်မှာနော်☹️🤒" },
+      { img: "cat_sad4.png", text: "တကယ်ငိုတော့မှာနော် 😣" },
+      { img: "cat_sad5.png", text: "မောင့်ကို မချစ်ဘူးလားလို့😭😭" },
+      { img: "cat_sad6.png", text: "ရပါတယ် မမ မချစ်တဲ့ဘဝမှာ တယောက်တည်းအထီးကျန်စွာဖြတ်သန်းပါတော့မယ်😭" },
+      { img: "cat_sad7.png", text: "ရှာမနေနဲ့ မရှိတော့ဘူး Yesကိုပဲ ရွေးလိုက်ပါတော့😭" }
+    ];
+
+    // ====== ELEMENTS ======
+    const cat = document.getElementById("cat");
+    const yesBtn = document.getElementById("yes");
+    const noBtn = document.getElementById("no");
+    const status = document.getElementById("status");
+
+    const overlay = document.getElementById("overlay");
+    const yesVideo = document.getElementById("yesVideo");
+    const closeOverlay = document.getElementById("closeOverlay");
+    const overlayText = document.getElementById("overlayText");
+
+    // ====== STATE ======
+    let noCount = 0;
+    let yesFont = 22; // px
+    let noFont  = 18; // px
+
+    function setCatSad(stageIndex) {
+      const stage = sadStages[Math.min(stageIndex, sadStages.length - 1)];
+      cat.src = stage.img;
+      status.textContent = stage.text;
+
+      // stop happy bounce when sad
+      cat.classList.remove("idle");
+
+      // more depressed as stages increase
+      const down = Math.min(stageIndex * 8, 26);
+      const scale = Math.max(1 - stageIndex * 0.05, 0.82);
+
+      cat.style.transform = `translateY(${down}px) scale(${scale})`;
+      cat.style.filter = `saturate(${Math.max(1 - stageIndex * 0.08, 0.72)})`;
+    }
+
+    function resetHappy() {
+      cat.src = "cat_happy.png";
+      cat.style.transform = "";
+      cat.style.filter = "";
+      cat.classList.add("idle");
+      status.textContent = "";
+      noCount = 0;
+
+      // reset buttons
+      yesFont = 22;
+      noFont = 18;
+
+      yesBtn.style.fontSize = yesFont + "px";
+      yesBtn.style.padding = "18px 42px";
+
+      // reset No button position and visibility
+      noBtn.style.display = "inline-block";
+      noBtn.classList.remove("no-float");
+      noBtn.style.top = "";
+      noBtn.style.bottom = "";
+      noBtn.style.left = "";
+      noBtn.style.right = "";
+
+      noBtn.style.fontSize = noFont + "px";
+      noBtn.style.padding = "18px 42px";
+      noBtn.style.opacity = "0.96";
+      noBtn.disabled = false;
+    }
+
+    // Move "No" to a random corner
+    function moveNoToCorner() {
+      const corners = [
+        { top: "20px", left: "20px" },
+        { top: "20px", right: "20px" },
+        { bottom: "20px", left: "20px" },
+        { bottom: "20px", right: "20px" }
+      ];
+
+      const corner = corners[Math.floor(Math.random() * corners.length)];
+
+      noBtn.classList.add("no-float");
+
+      // reset first
+      noBtn.style.top = "";
+      noBtn.style.bottom = "";
+      noBtn.style.left = "";
+      noBtn.style.right = "";
+
+      Object.assign(noBtn.style, corner);
+    }
+
+    // ====== NO CLICK ======
+    noBtn.addEventListener("click", () => {
+      noCount++;
+
+      // Yes grows, No shrinks
+      yesFont += 30; // your dramatic growth
+      noFont = Math.max(noFont - 2, 10);
+
+      yesBtn.style.fontSize = yesFont + "px";
+      yesBtn.style.padding = (18 + noCount * 2) + "px " + (42 + noCount * 4) + "px";
+
+      noBtn.style.fontSize = noFont + "px";
+      noBtn.style.padding =
+        Math.max(18 - noCount, 8) + "px " + Math.max(42 - noCount * 3, 12) + "px";
+
+      // Cat gets sadder each NO
+      setCatSad(noCount - 1);
+
+      // After 3rd NO, start moving No to corners
+      if (noCount >= 3 && noCount < sadStages.length) {
+        moveNoToCorner();
+      }
+
+      // Final stage: remove No completely, only Yes remains
+      if (noCount >= sadStages.length) {
+        noBtn.style.display = "none";
+      }
+    });
+
+    // ====== YES CLICK (Dance once -> Kiss loop) ======
+    yesBtn.addEventListener("click", () => {
+      overlay.classList.add("show");
+      overlayText.textContent = "YAY!!! Noona The BEST😍💘";
+
+      // happy reset for main screen (optional)
+      cat.src = "cat_happy.png";
+      cat.style.transform = "";
+      cat.style.filter = "";
+      cat.classList.add("idle");
+
+      // Play dance first (once)
+      yesVideo.onended = null;
+      yesVideo.src = "yes_dance.mp4";
+      yesVideo.loop = false;
+
+      try { yesVideo.currentTime = 0; yesVideo.play(); } catch (e) {}
+
+      // After dance ends -> kiss loops
+      yesVideo.onended = () => {
+        overlayText.textContent = "လာပါဦး အနားနားလေးကို အာဘွားလေးပေးချင်လို့ အူးမွ အူးမွ😘";
+        yesVideo.src = "yes_kiss.mp4";
+        yesVideo.loop = true;
+        try { yesVideo.currentTime = 0; yesVideo.play(); } catch (e) {}
+      };
+    });
+
+    // ====== CLOSE OVERLAY ======
+    function closeYesOverlay() {
+      overlay.classList.remove("show");
+      try { yesVideo.pause(); } catch (e) {}
+    }
+
+    closeOverlay.addEventListener("click", closeYesOverlay);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeYesOverlay();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("show")) {
+        closeYesOverlay();
+      }
+    });
+
+    // Start clean
+    resetHappy();
+  </script>
+</body>
+</html>
